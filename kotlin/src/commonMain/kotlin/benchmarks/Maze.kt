@@ -197,16 +197,19 @@ class MazeBFS : Benchmark() {
     ): List<MazeGenerator.Cell> {
         if (start == target) return listOf(start)
 
-        val queue = ArrayDeque<Int>()
+        // FIFO queue of pathNodes indices; every cell is enqueued at most once
+        val queue = IntArray(width * height)
+        var head = 0
+        var tail = 0
         val visited = Array(height) { BooleanArray(width) }
         val pathNodes = mutableListOf<PathNode>()
 
         visited[start.y][start.x] = true
         pathNodes.add(PathNode(start, -1))
-        queue.addLast(0)
+        queue[tail++] = 0
 
-        while (queue.isNotEmpty()) {
-            val pathId = queue.removeFirst()
+        while (head < tail) {
+            val pathId = queue[head++]
             val node = pathNodes[pathId]
 
             for (neighbor in node.cell.neighbors) {
@@ -224,7 +227,7 @@ class MazeBFS : Benchmark() {
                 if (neighbor.isWalkable() && !visited[neighbor.y][neighbor.x]) {
                     visited[neighbor.y][neighbor.x] = true
                     pathNodes.add(PathNode(neighbor, pathId))
-                    queue.addLast(pathNodes.size - 1)
+                    queue[tail++] = pathNodes.size - 1
                 }
             }
         }

@@ -56,11 +56,6 @@ class TextRaytracer : Benchmark() {
         val color: Color,
     )
 
-    private data class Hit(
-        val obj: Sphere,
-        val value: Double,
-    )
-
     companion object {
         private val WHITE = Color(1.0, 1.0, 1.0)
         private val RED = Color(1.0, 0.0, 0.0)
@@ -72,7 +67,7 @@ class TextRaytracer : Benchmark() {
         private const val LUT = ".-+*XM"
 
         private val SCENE =
-            listOf(
+            arrayOf(
                 Sphere(Vector(-1.0, 0.0, 3.0), 0.3, RED),
                 Sphere(Vector(0.0, 0.0, 3.0), 0.8, GREEN),
                 Sphere(Vector(1.0, 0.0, 3.0), 0.4, BLUE),
@@ -94,22 +89,23 @@ class TextRaytracer : Benchmark() {
         return (col * 6.0).toInt().coerceIn(0, 5)
     }
 
+    /** Distance to the intersection, or NaN when the ray misses (avoids boxing a `Double?`). */
     private fun intersectSphere(
         ray: Ray,
         center: Vector,
         radius: Double,
-    ): Double? {
+    ): Double {
         val l = center - ray.orig
         val tca = l.dot(ray.dir)
-        if (tca < 0.0) return null
+        if (tca < 0.0) return Double.NaN
 
         val d2 = l.dot(l) - tca * tca
         val r2 = radius * radius
-        if (d2 > r2) return null
+        if (d2 > r2) return Double.NaN
 
         val thc = sqrt(r2 - d2)
         val t0 = tca - thc
-        if (t0 > 10000.0) return null
+        if (t0 > 10000.0) return Double.NaN
 
         return t0
     }
@@ -140,19 +136,21 @@ class TextRaytracer : Benchmark() {
                         Vector((fi - fw / 2.0) / fw, (fj - fh / 2.0) / fh, 1.0).normalize(),
                     )
 
-                var hit: Hit? = null
+                var hitObj: Sphere? = null
+                var hitValue = 0.0
 
                 for (obj in SCENE) {
                     val ret = intersectSphere(ray, obj.center, obj.radius)
-                    if (ret != null) {
-                        hit = Hit(obj, ret)
+                    if (!ret.isNaN()) {
+                        hitObj = obj
+                        hitValue = ret
                         break
                     }
                 }
 
                 val pixel =
-                    if (hit != null) {
-                        val shade = shadePixel(ray, hit.obj, hit.value)
+                    if (hitObj != null) {
+                        val shade = shadePixel(ray, hitObj, hitValue)
                         LUT[shade]
                     } else {
                         ' '

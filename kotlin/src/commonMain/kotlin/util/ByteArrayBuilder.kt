@@ -30,11 +30,5 @@ class ByteArrayBuilder(
         size += bytes.size
     }
 
-    /** Writes each char of [s] as one byte (ISO-8859-1), for strings with chars in 0..255. */
-    fun writeLatin1(s: String) {
-        ensureCapacity(s.length)
-        for (c in s) buffer[size++] = c.code.toByte()
-    }
-
     fun toByteArray(): ByteArray = buffer.copyOf(size)
 }

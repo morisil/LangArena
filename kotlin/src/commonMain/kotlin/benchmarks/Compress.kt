@@ -103,32 +103,32 @@ class BWTEncode : Benchmark() {
                 rank[idx] = currentRank
             }
 
+            // Stable sort of sa by the pair (rank[i], rank[(i + k) % n]), without boxing:
+            // each entry is packed as (first, second, current position in sa) into one Long,
+            // so sorting the LongArray orders by the pair and breaks ties by the previous
+            // order, exactly like a stable comparison sort.
+            require(n <= POS_MASK + 1) { "BWT input too large: $n" }
+            val keys = LongArray(n)
+            val sorted = IntArray(n)
+            val newRank = IntArray(n)
             var k = 1
             while (k < n) {
-                val pairs = Array(n) { Pair(rank[it], rank[(it + k) % n]) }
-
-                val saArray = Array(n) { sa[it] }
-                saArray.sortWith { a, b ->
-                    val pa = pairs[a]
-                    val pb = pairs[b]
-                    if (pa.first != pb.first) {
-                        pa.first.compareTo(pb.first)
-                    } else {
-                        pa.second.compareTo(pb.second)
-                    }
+                for (pos in 0 until n) {
+                    val i = sa[pos]
+                    keys[pos] = (rank[i].toLong() shl 42) or
+                        (rank[(i + k) % n].toLong() shl 21) or pos.toLong()
                 }
+                keys.sort()
 
-                for (i in 0 until n) {
-                    sa[i] = saArray[i]
+                for (j in 0 until n) {
+                    sorted[j] = sa[(keys[j] and POS_MASK).toInt()]
                 }
+                sorted.copyInto(sa)
 
-                val newRank = IntArray(n)
                 newRank[sa[0]] = 0
-                for (i in 1 until n) {
-                    val prevPair = pairs[sa[i - 1]]
-                    val currPair = pairs[sa[i]]
-                    val same = prevPair.first == currPair.first && prevPair.second == currPair.second
-                    newRank[sa[i]] = newRank[sa[i - 1]] + if (same) 0 else 1
+                for (j in 1 until n) {
+                    val same = keys[j - 1] ushr 21 == keys[j] ushr 21
+                    newRank[sa[j]] = newRank[sa[j - 1]] + if (same) 0 else 1
                 }
 
                 newRank.copyInto(rank)
@@ -152,10 +152,10 @@ class BWTEncode : Benchmark() {
         return BWTResult(transformed, originalIdx)
     }
 
-    private data class Pair(
-        val first: Int,
-        val second: Int,
-    )
+    private companion object {
+        /** 21 bits per packed field: ranks and positions must be < 2^21. */
+        const val POS_MASK = (1L shl 21) - 1
+    }
 }
 
 class BWTDecode : Benchmark() {
@@ -833,9 +833,9 @@ class LZWDecode : Benchmark() {
             return byteArrayOf()
         }
 
-        val dict = ArrayList<String>(4096)
+        val dict = ArrayList<ByteArray>(4096)
         for (i in 0 until 256) {
-            dict.add(Char(i).toString())
+            dict.add(byteArrayOf(i.toByte()))
         }
 
         val result = ByteArrayBuilder(encoded.data.size * 2)
@@ -847,8 +847,8 @@ class LZWDecode : Benchmark() {
         var oldCode = (high shl 8) or low
         pos += 2
 
-        var oldStr = dict[oldCode]
-        result.writeLatin1(oldStr)
+        var oldEntry = dict[oldCode]
+        result.write(oldEntry)
         var nextCode = 256
 
         while (pos < data.size) {
@@ -857,20 +857,20 @@ class LZWDecode : Benchmark() {
             val newCode = (high shl 8) or low
             pos += 2
 
-            val newStr =
+            val newEntry =
                 if (newCode < dict.size) {
                     dict[newCode]
                 } else if (newCode == nextCode) {
-                    oldStr + oldStr.substring(0, 1)
+                    oldEntry + oldEntry[0]
                 } else {
                     return byteArrayOf()
                 }
 
-            result.writeLatin1(newStr)
+            result.write(newEntry)
 
-            dict.add(oldStr + newStr.substring(0, 1))
+            dict.add(oldEntry + newEntry[0])
             nextCode++
-            oldStr = newStr
+            oldEntry = newEntry
         }
 
         return result.toByteArray()

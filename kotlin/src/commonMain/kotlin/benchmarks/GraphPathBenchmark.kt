@@ -9,14 +9,18 @@ abstract class GraphPathBenchmark : Benchmark() {
         val jumps: Int = 3,
         val jumpLen: Int = 100,
     ) {
-        val adj = Array(vertices) { mutableListOf<Int>() }
+        private val edges = Array(vertices) { mutableListOf<Int>() }
+
+        /** Neighbors of each vertex, in insertion order; available after [generateRandom]. */
+        lateinit var adj: Array<IntArray>
+            private set
 
         fun addEdge(
             u: Int,
             v: Int,
         ) {
-            adj[u].add(v)
-            adj[v].add(u)
+            edges[u].add(v)
+            edges[v].add(u)
         }
 
         fun generateRandom() {
@@ -35,13 +39,10 @@ abstract class GraphPathBenchmark : Benchmark() {
                     }
                 }
             }
+
+            adj = Array(vertices) { edges[it].toIntArray() }
         }
     }
-
-    protected data class Step(
-        val vertex: Int,
-        val dist: Int,
-    )
 
     protected lateinit var graph: Graph
     private var resultVal: UInt = 0u
@@ -72,20 +73,27 @@ class GraphPathBFS : GraphPathBenchmark() {
         if (start == target) return 0
 
         val visited = BooleanArray(graph.vertices)
-        val queue = ArrayDeque<Step>()
+        // FIFO queue of (vertex, dist) steps; every vertex is enqueued at most once
+        val queueVertex = IntArray(graph.vertices)
+        val queueDist = IntArray(graph.vertices)
+        var head = 0
+        var tail = 0
 
         visited[start] = true
-        queue.add(Step(start, 0))
+        queueVertex[tail] = start
+        queueDist[tail++] = 0
 
-        while (queue.isNotEmpty()) {
-            val (v, dist) = queue.removeFirst()
+        while (head < tail) {
+            val v = queueVertex[head]
+            val dist = queueDist[head++]
 
             for (neighbor in graph.adj[v]) {
                 if (neighbor == target) return dist + 1
 
                 if (!visited[neighbor]) {
                     visited[neighbor] = true
-                    queue.add(Step(neighbor, dist + 1))
+                    queueVertex[tail] = neighbor
+                    queueDist[tail++] = dist + 1
                 }
             }
         }
@@ -106,13 +114,18 @@ class GraphPathDFS : GraphPathBenchmark() {
         if (start == target) return 0
 
         val visited = BooleanArray(graph.vertices)
-        val stack = ArrayDeque<Step>()
+        // LIFO stack of (vertex, dist) steps
+        var stackVertex = IntArray(graph.vertices)
+        var stackDist = IntArray(graph.vertices)
+        var size = 0
         var bestPath = Int.MAX_VALUE
 
-        stack.add(Step(start, 0))
+        stackVertex[size] = start
+        stackDist[size++] = 0
 
-        while (stack.isNotEmpty()) {
-            val (v, dist) = stack.removeLast()
+        while (size > 0) {
+            val v = stackVertex[--size]
+            val dist = stackDist[size]
 
             if (visited[v] || dist >= bestPath) continue
             visited[v] = true
@@ -121,7 +134,12 @@ class GraphPathDFS : GraphPathBenchmark() {
                 if (neighbor == target) {
                     if (dist + 1 < bestPath) bestPath = dist + 1
                 } else if (!visited[neighbor]) {
-                    stack.add(Step(neighbor, dist + 1))
+                    if (size == stackVertex.size) {
+                        stackVertex = stackVertex.copyOf(size * 2)
+                        stackDist = stackDist.copyOf(size * 2)
+                    }
+                    stackVertex[size] = neighbor
+                    stackDist[size++] = dist + 1
                 }
             }
         }

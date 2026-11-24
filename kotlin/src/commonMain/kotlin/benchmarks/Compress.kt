@@ -10,6 +10,10 @@ private const val THREE_QUARTERS = 0xC0000000uL
 /**
  * Same algorithm as `java.util.Arrays.binarySearch(int[], int)`, so that with duplicate
  * values the same index is found: the index of [key], or `-(insertion point) - 1`.
+ *
+ * The stdlib `IntArray.binarySearch` is JVM-only, and the common `List.binarySearch`
+ * (via `asList()`) boxes every probed element: +9% on JVM, 3.5x slower on Kotlin/Native
+ * for Compress::ArithDecode.
  */
 private fun binarySearch(
     a: IntArray,

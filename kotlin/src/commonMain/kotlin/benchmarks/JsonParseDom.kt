@@ -1,7 +1,11 @@
 package benchmarks
 
 import Benchmark
-import com.alibaba.fastjson2.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class JsonParseDom : Benchmark() {
     private lateinit var text: String
@@ -16,18 +20,18 @@ class JsonParseDom : Benchmark() {
     }
 
     private fun calc(text: String): Coord {
-        val json = JSONObject.parseObject(text)
-        val coordinates = json.getJSONArray("coordinates")
+        val json = Json.parseToJsonElement(text).jsonObject
+        val coordinates = json.getValue("coordinates").jsonArray
 
         var x = 0.0
         var y = 0.0
         var z = 0.0
 
-        for (i in 0 until coordinates.size) {
-            val coord = coordinates.getJSONObject(i)
-            x += coord.getDoubleValue("x")
-            y += coord.getDoubleValue("y")
-            z += coord.getDoubleValue("z")
+        for (element in coordinates) {
+            val coord = element.jsonObject
+            x += coord.getValue("x").jsonPrimitive.double
+            y += coord.getValue("y").jsonPrimitive.double
+            z += coord.getValue("z").jsonPrimitive.double
         }
 
         val len = coordinates.size.toDouble()

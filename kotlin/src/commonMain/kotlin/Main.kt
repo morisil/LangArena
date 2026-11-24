@@ -1,12 +1,11 @@
 import benchmarks.*
-import java.io.File
-import java.time.Instant
-import java.util.Locale
-import kotlin.system.exitProcess
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.writeString
+import kotlin.time.Clock
 
 fun main(args: Array<String>) {
-    Locale.setDefault(Locale.US)
-
     Benchmark.registerBenchmark("Binarytrees::Obj") { BinarytreesObj() }
     Benchmark.registerBenchmark("Binarytrees::Arena") { BinarytreesArena() }
     Benchmark.registerBenchmark("Brainfuck::Array") { BrainfuckArray() }
@@ -58,7 +57,7 @@ fun main(args: Array<String>) {
     Benchmark.registerBenchmark("Template::Parse") { TemplateParse() }
     Benchmark.registerBenchmark("CSV::Parse") { CsvParse() }
 
-    val now = Instant.now().toEpochMilli()
+    val now = Clock.System.now().toEpochMilliseconds()
     println("start: $now")
 
     val configFile =
@@ -74,18 +73,18 @@ fun main(args: Array<String>) {
         Helper.loadConfig(configFile)
 
         if (Helper.config.isEmpty()) {
-            System.err.println("Warning: No test cases loaded from config file")
-            System.err.println("Usage: ./gradlew run --args=\"test.js BrainfuckRecursion\"")
-            System.err.println("Or: ./gradlew run --args=\"../run.js\"")
-            exitProcess(1)
+            printErr("Warning: No test cases loaded from config file")
+            printErr("Usage: ./gradlew run --args=\"test.js BrainfuckRecursion\"")
+            printErr("Or: ./gradlew run --args=\"../run.js\"")
+            exit(1)
         }
     } catch (e: Exception) {
-        System.err.println("Error loading config file '${configFile ?: "test.js"}': ${e.message}")
-        e.printStackTrace()
-        exitProcess(1)
+        printErr("Error loading config file '${configFile ?: "test.js"}': ${e.message}")
+        printErr(e.stackTraceToString())
+        exit(1)
     }
 
-    File("/tmp/recompile_marker").writeText("RECOMPILE_MARKER_0")
+    SystemFileSystem.sink(Path("/tmp/recompile_marker")).buffered().use { it.writeString("RECOMPILE_MARKER_0") }
 
     Benchmark.all(singleBench)
 }

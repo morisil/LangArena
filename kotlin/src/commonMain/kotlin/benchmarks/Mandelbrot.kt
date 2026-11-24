@@ -1,12 +1,12 @@
 package benchmarks
 
 import Benchmark
-import java.io.ByteArrayOutputStream
+import util.ByteArrayBuilder
 
 class Mandelbrot : Benchmark() {
     private val w = configInt("w")
     private val h = configInt("h")
-    private lateinit var result: ByteArrayOutputStream
+    private lateinit var result: ByteArrayBuilder
 
     companion object {
         private const val ITER = 50
@@ -14,11 +14,11 @@ class Mandelbrot : Benchmark() {
     }
 
     override fun prepare() {
-        result = ByteArrayOutputStream()
+        result = ByteArrayBuilder()
     }
 
     override fun run(iterationId: Int) {
-        result.write("P4\n$w $h\n".toByteArray())
+        result.write("P4\n$w $h\n".encodeToByteArray())
 
         var bitNum = 0
         var byteAcc = 0

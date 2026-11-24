@@ -1,4 +1,5 @@
-import kotlin.system.exitProcess
+import util.toFixed
+import kotlin.time.TimeSource
 
 abstract class Benchmark {
     abstract fun run(iterationId: Int)
@@ -39,7 +40,7 @@ abstract class Benchmark {
             factory: () -> Benchmark,
         ) {
             if (benchmarkMap.containsKey(name)) {
-                System.err.println("Warning: Benchmark with name '$name' already registered. Skipping.")
+                printErr("Warning: Benchmark with name '$name' already registered. Skipping.")
                 return
             }
             benchmarkMap[name] = factory
@@ -67,17 +68,17 @@ abstract class Benchmark {
 
                 bench.prepare()
                 bench.warmup()
-                System.gc()
+                collectGarbage()
 
                 Helper.reset()
 
-                val startTime = System.nanoTime()
+                val startTime = TimeSource.Monotonic.markNow()
                 bench.runAll()
-                val timeDelta2 = (System.nanoTime() - startTime) / 1_000_000_000.0
+                val timeDelta2 = startTime.elapsedNow().inWholeNanoseconds / 1_000_000_000.0
 
-                System.gc()
-                Thread.sleep(1)
-                System.gc()
+                collectGarbage()
+                sleepMillis(1)
+                collectGarbage()
 
                 print("$benchName: ")
                 if (bench.checksum().toLong() == bench.expectedChecksum()) {
@@ -88,14 +89,14 @@ abstract class Benchmark {
                     fails++
                 }
 
-                println("in %.3fs".format(timeDelta2))
+                println("in ${timeDelta2.toFixed(3)}s")
                 summaryTime += timeDelta2
             }
 
-            println("Summary: %.4fs, %d, %d, %d".format(summaryTime, ok + fails, ok, fails))
+            println("Summary: ${summaryTime.toFixed(4)}s, ${ok + fails}, $ok, $fails")
 
             if (fails > 0) {
-                exitProcess(1)
+                exit(1)
             }
         }
     }

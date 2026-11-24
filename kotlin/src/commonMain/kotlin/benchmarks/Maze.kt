@@ -1,9 +1,7 @@
 package benchmarks
 
 import Benchmark
-import java.util.ArrayDeque
-import java.util.PriorityQueue
-import java.util.Queue
+import util.MinHeap
 import kotlin.math.abs
 
 class MazeGenerator : Benchmark() {
@@ -88,10 +86,10 @@ class MazeGenerator : Benchmark() {
 
         private fun dig(startCell: Cell) {
             val stack = ArrayDeque<Cell>(w * h)
-            stack.push(startCell)
+            stack.addFirst(startCell)
 
             while (stack.isNotEmpty()) {
-                val cell = stack.pop()
+                val cell = stack.removeFirst()
 
                 val walkable = cell.neighbors.count { it.isWalkable() }
                 if (walkable != 1) continue
@@ -100,7 +98,7 @@ class MazeGenerator : Benchmark() {
 
                 for (n in cell.neighbors) {
                     if (n.kind == CellKind.WALL) {
-                        stack.push(n)
+                        stack.addFirst(n)
                     }
                 }
             }
@@ -199,16 +197,16 @@ class MazeBFS : Benchmark() {
     ): List<MazeGenerator.Cell> {
         if (start == target) return listOf(start)
 
-        val queue: Queue<Int> = ArrayDeque()
+        val queue = ArrayDeque<Int>()
         val visited = Array(height) { BooleanArray(width) }
         val pathNodes = mutableListOf<PathNode>()
 
         visited[start.y][start.x] = true
         pathNodes.add(PathNode(start, -1))
-        queue.add(0)
+        queue.addLast(0)
 
         while (queue.isNotEmpty()) {
-            val pathId = queue.remove()
+            val pathId = queue.removeFirst()
             val node = pathNodes[pathId]
 
             for (neighbor in node.cell.neighbors) {
@@ -226,7 +224,7 @@ class MazeBFS : Benchmark() {
                 if (neighbor.isWalkable() && !visited[neighbor.y][neighbor.x]) {
                     visited[neighbor.y][neighbor.x] = true
                     pathNodes.add(PathNode(neighbor, pathId))
-                    queue.add(pathNodes.size - 1)
+                    queue.addLast(pathNodes.size - 1)
                 }
             }
         }
@@ -292,7 +290,7 @@ class MazeAStar : Benchmark() {
         val startIdx = idx(start.y, start.x)
         val targetIdx = idx(target.y, target.x)
 
-        val openSet = PriorityQueue<Item>()
+        val openSet = MinHeap<Item>()
 
         gScore[startIdx] = 0
         val fStart = heuristic(start, target)

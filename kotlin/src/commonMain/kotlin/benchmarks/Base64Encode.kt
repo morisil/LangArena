@@ -1,7 +1,7 @@
 package benchmarks
 
 import Benchmark
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 class Base64Encode : Benchmark() {
     private val n = configInt("size")
@@ -11,17 +11,17 @@ class Base64Encode : Benchmark() {
 
     override fun prepare() {
         val str = "a".repeat(n)
-        bytes = str.toByteArray()
-        str2 = Base64.getEncoder().encodeToString(bytes)
+        bytes = str.encodeToByteArray()
+        str2 = Base64.encode(bytes)
     }
 
     override fun run(iterationId: Int) {
-        val encoded = Base64.getEncoder().encodeToString(bytes)
+        val encoded = Base64.encode(bytes)
         resultVal += encoded.length.toUInt()
     }
 
     override fun checksum(): UInt {
-        val str = String(bytes.copyOfRange(0, 4))
+        val str = bytes.copyOfRange(0, 4).decodeToString()
         val message = "encode ${str.take(4)}... to ${str2.take(4)}...: $resultVal"
         return Helper.checksum(message)
     }

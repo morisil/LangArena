@@ -1,32 +1,50 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("multiplatform") version "2.5.0-RC"
+    kotlin("plugin.serialization") version "2.5.0-RC"
 }
 
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation("com.alibaba.fastjson2:fastjson2-kotlin:2.0.66")
+kotlin {
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_25)
+        }
+    }
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("com.opencsv:opencsv:5.12.0")
+    listOf(
+        macosArm64(),
+        linuxX64(),
+        linuxArm64(),
+    ).forEach {
+        it.binaries.executable {
+            entryPoint = "main"
+            baseName = "benchmarks"
+        }
+    }
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
-    implementation("org.json:json:20260814")
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
+    sourceSets {
+        commonMain.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.9.3")
+        }
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }
+
+tasks.withType<JavaCompile>().configureEach {
+    sourceCompatibility = JavaVersion.VERSION_25.toString()
+    targetCompatibility = JavaVersion.VERSION_25.toString()
+}
+
+val jvmMainCompilation = kotlin.jvm().compilations.getByName("main")
 
 tasks.register<Jar>("fatJar") {
     archiveBaseName.set("benchmarks")
@@ -35,11 +53,12 @@ tasks.register<Jar>("fatJar") {
         attributes["Main-Class"] = "MainKt"
     }
 
-    from(sourceSets.main.get().output)
+    from(jvmMainCompilation.output.allOutputs)
 
-    dependsOn(configurations.runtimeClasspath)
+    val runtimeClasspath = configurations.named("jvmRuntimeClasspath")
+    dependsOn(runtimeClasspath)
     from({
-        configurations.runtimeClasspath
+        runtimeClasspath
             .get()
             .filter { it.name.endsWith("jar") }
             .map { zipTree(it) }
@@ -53,9 +72,13 @@ tasks.register<JavaExec>("runDebug") {
     description = "Run in debug mode"
 
     mainClass.set("MainKt")
-    classpath = sourceSets.main.get().runtimeClasspath
+    classpath = files(jvmMainCompilation.output.allOutputs, configurations.named("jvmRuntimeClasspath"))
 
     if (project.hasProperty("args")) {
         args((project.property("args") as String).split(" "))
     }
+}
+
+tasks.named("jvmTest", Test::class) {
+    useJUnitPlatform()
 }

@@ -2,7 +2,6 @@ package benchmarks
 
 import Benchmark
 import Helper
-import java.nio.charset.StandardCharsets
 
 object Distance {
     private const val ALPHABET = "abcdefghij"
@@ -51,8 +50,8 @@ object Distance {
             s1: String,
             s2: String,
         ): Double {
-            val bytes1 = s1.toByteArray(StandardCharsets.US_ASCII)
-            val bytes2 = s2.toByteArray(StandardCharsets.US_ASCII)
+            val bytes1 = s1.encodeToByteArray()
+            val bytes2 = s2.encodeToByteArray()
 
             val len1 = bytes1.size
             val len2 = bytes2.size
@@ -132,8 +131,8 @@ object Distance {
             s1: String,
             s2: String,
         ): Double {
-            val bytes1 = s1.toByteArray(StandardCharsets.US_ASCII)
-            val bytes2 = s2.toByteArray(StandardCharsets.US_ASCII)
+            val bytes1 = s1.encodeToByteArray()
+            val bytes2 = s2.encodeToByteArray()
 
             if (bytes1.size < N || bytes2.size < N) return 0.0
 
@@ -146,7 +145,7 @@ object Distance {
                         ((bytes1[i + 2].toLong() and 0xFF) shl 8) or
                         (bytes1[i + 3].toLong() and 0xFF)
 
-                grams1.merge(gram, 1) { old, _ -> old + 1 }
+                grams1[gram] = (grams1[gram] ?: 0) + 1
             }
 
             val grams2 = HashMap<Long, Int>(bytes2.size)

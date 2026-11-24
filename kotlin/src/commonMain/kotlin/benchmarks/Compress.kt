@@ -1,15 +1,37 @@
 package benchmarks
 
 import Benchmark
-import java.io.ByteArrayOutputStream
+import util.ByteArrayBuilder
 
 private const val HALF = 0x80000000uL
 private const val QUARTER = 0x40000000uL
 private const val THREE_QUARTERS = 0xC0000000uL
 
+/**
+ * Same algorithm as `java.util.Arrays.binarySearch(int[], int)`, so that with duplicate
+ * values the same index is found: the index of [key], or `-(insertion point) - 1`.
+ */
+private fun binarySearch(
+    a: IntArray,
+    key: Int,
+): Int {
+    var low = 0
+    var high = a.size - 1
+    while (low <= high) {
+        val mid = (low + high) ushr 1
+        val midVal = a[mid]
+        when {
+            midVal < key -> low = mid + 1
+            midVal > key -> high = mid - 1
+            else -> return mid
+        }
+    }
+    return -(low + 1)
+}
+
 object Compress {
     fun generateTestData(dataSize: Long): ByteArray {
-        val pattern = "ABRACADABRA".toByteArray()
+        val pattern = "ABRACADABRA".encodeToByteArray()
         return ByteArray(dataSize.toInt()) { pattern[it % pattern.size] }
     }
 }
@@ -472,7 +494,7 @@ class ArithEncode : Benchmark() {
     class BitOutputStream {
         private var buffer = 0
         private var bitPos = 0
-        private val bytes = ByteArrayOutputStream()
+        private val bytes = ByteArrayBuilder()
         var bitsWritten = 0
             private set
 
@@ -664,7 +686,7 @@ class ArithDecode : Benchmark() {
             val range = high - low + 1uL
             val scaled = ((value - low + 1uL) * total.toULong() - 1uL) / range
 
-            var symbol = highTable.binarySearch(scaled.toInt())
+            var symbol = binarySearch(highTable, scaled.toInt())
             if (symbol < 0) {
                 symbol = symbol.inv()
             } else {
@@ -740,12 +762,12 @@ class LZWEncode : Benchmark() {
 
         val dict = HashMap<String, Int>(4096)
         for (i in 0 until 256) {
-            dict[i.toChar().toString()] = i
+            dict[Char(i).toString()] = i
         }
 
         var nextCode = 256
 
-        val result = ByteArrayOutputStream(input.size * 2)
+        val result = ByteArrayBuilder(input.size * 2)
 
         var current = Char(input[0].toInt() and 0xFF).toString()
 
@@ -813,10 +835,10 @@ class LZWDecode : Benchmark() {
 
         val dict = ArrayList<String>(4096)
         for (i in 0 until 256) {
-            dict.add(String(byteArrayOf(i.toByte()), Charsets.ISO_8859_1))
+            dict.add(Char(i).toString())
         }
 
-        val result = ByteArrayOutputStream(encoded.data.size * 2)
+        val result = ByteArrayBuilder(encoded.data.size * 2)
         val data = encoded.data
         var pos = 0
 
@@ -826,7 +848,7 @@ class LZWDecode : Benchmark() {
         pos += 2
 
         var oldStr = dict[oldCode]
-        result.write(oldStr.toByteArray(Charsets.ISO_8859_1))
+        result.writeLatin1(oldStr)
         var nextCode = 256
 
         while (pos < data.size) {
@@ -844,7 +866,7 @@ class LZWDecode : Benchmark() {
                     return byteArrayOf()
                 }
 
-            result.write(newStr.toByteArray(Charsets.ISO_8859_1))
+            result.writeLatin1(newStr)
 
             dict.add(oldStr + newStr.substring(0, 1))
             nextCode++

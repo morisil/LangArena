@@ -1,8 +1,7 @@
 package benchmarks
 
 import Benchmark
-import java.util.ArrayDeque
-import java.util.PriorityQueue
+import util.MinHeap
 
 abstract class GraphPathBenchmark : Benchmark() {
     protected class Graph(
@@ -168,7 +167,7 @@ class GraphPathAStar : GraphPathBenchmark() {
         val fStart = heuristic(start, target)
         bestF[start] = fStart
 
-        val openSet = PriorityQueue<GraphPriorityQueueItem>()
+        val openSet = MinHeap<GraphPriorityQueueItem>()
         openSet.add(GraphPriorityQueueItem(fStart, start))
 
         while (openSet.isNotEmpty()) {

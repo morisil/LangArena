@@ -16,7 +16,7 @@ class Words : Benchmark() {
         text =
             List(words) {
                 val len = Helper.nextInt(wordLen) + Helper.nextInt(3) + 3
-                String(CharArray(len) { CHARS[Helper.nextInt(CHARS.size)] })
+                CharArray(len) { CHARS[Helper.nextInt(CHARS.size)] }.concatToString()
             }.joinToString(" ")
     }
 
@@ -25,7 +25,7 @@ class Words : Benchmark() {
 
         for (word in text.split(' ')) {
             if (word.isEmpty()) continue
-            frequencies[word] = frequencies.getOrDefault(word, 0) + 1
+            frequencies[word] = (frequencies[word] ?: 0) + 1
         }
 
         var maxWord = ""

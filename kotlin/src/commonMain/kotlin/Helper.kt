@@ -1,7 +1,14 @@
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.util.Locale
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import util.toFixed
 
 object Helper {
     private const val IM = 139968
@@ -14,7 +21,7 @@ object Helper {
     var order: List<String> = emptyList()
         private set
 
-    var config = JSONObject()
+    var config = JsonObject(emptyMap())
         private set
 
     fun reset() {
@@ -37,7 +44,7 @@ object Helper {
     }
 
     fun debug(message: () -> String) {
-        if ("1" == System.getenv("DEBUG")) {
+        if ("1" == getEnv("DEBUG")) {
             println(message())
         }
     }
@@ -58,33 +65,33 @@ object Helper {
         return hash.toUInt()
     }
 
-    fun checksumF64(v: Double): UInt = checksum("%.7f".format(Locale.US, v))
+    fun checksumF64(v: Double): UInt = checksum(v.toFixed(7))
 
     fun loadConfig(filename: String? = null) {
-        val jsonArray = JSONArray(File(filename ?: "../run.js").readText())
-        val dict = JSONObject()
+        val text = SystemFileSystem.source(Path(filename ?: "../run.js")).buffered().use { it.readString() }
+        val dict = LinkedHashMap<String, JsonObject>()
         val orderList = mutableListOf<String>()
 
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.getJSONObject(i)
-            val name = item.getString("name")
-            dict.put(name, item)
+        for (element in Json.parseToJsonElement(text).jsonArray) {
+            val item = element.jsonObject
+            val name = item.getValue("name").jsonPrimitive.content
+            dict[name] = item
             orderList.add(name)
         }
 
-        config = dict
+        config = JsonObject(dict)
         order = orderList
     }
 
     private fun configSection(
         className: String,
         fieldName: String,
-    ): JSONObject? = config.optJSONObject(className)?.takeIf { it.has(fieldName) }
+    ): JsonObject? = (config[className] as? JsonObject)?.takeIf { it.containsKey(fieldName) }
 
     fun optConfigI64(
         className: String,
         fieldName: String,
-    ): Long? = configSection(className, fieldName)?.getLong(fieldName)
+    ): Long? = configSection(className, fieldName)?.getValue(fieldName)?.jsonPrimitive?.long
 
     fun configI64(
         className: String,
@@ -92,10 +99,10 @@ object Helper {
     ): Long {
         val section = configSection(className, fieldName)
         if (section == null) {
-            System.err.println("Config not found for $className, field: $fieldName")
+            printErr("Config not found for $className, field: $fieldName")
             return 0
         }
-        return section.getLong(fieldName)
+        return section.getValue(fieldName).jsonPrimitive.long
     }
 
     fun configS(
@@ -104,9 +111,9 @@ object Helper {
     ): String {
         val section = configSection(className, fieldName)
         if (section == null) {
-            System.err.println("Config not found for $className, field: $fieldName")
+            printErr("Config not found for $className, field: $fieldName")
             return ""
         }
-        return section.getString(fieldName)
+        return section.getValue(fieldName).jsonPrimitive.content
     }
 }

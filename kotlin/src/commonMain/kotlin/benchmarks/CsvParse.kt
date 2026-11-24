@@ -2,9 +2,8 @@ package benchmarks
 
 import Benchmark
 import Helper
-import com.opencsv.CSVReader
-import java.io.StringReader
-import java.util.Locale
+import util.CsvReader
+import util.toFixed
 
 class CsvParse : Benchmark() {
     private lateinit var data: String
@@ -31,11 +30,11 @@ class CsvParse : Benchmark() {
                 .append("\"\"\"")
                 .append(',')
 
-            sb.append("%.10f".format(Locale.US, x)).append(',')
+            sb.append(x.toFixed(10)).append(',')
 
             sb.append(',')
 
-            sb.append("%.10f".format(Locale.US, z)).append(',')
+            sb.append(z.toFixed(10)).append(',')
 
             sb
                 .append('"')
@@ -47,7 +46,7 @@ class CsvParse : Benchmark() {
                 .append('"')
                 .append(',')
 
-            sb.append("%.10f".format(Locale.US, y)).append('\n')
+            sb.append(y.toFixed(10)).append('\n')
         }
 
         data = sb.toString()
@@ -62,15 +61,14 @@ class CsvParse : Benchmark() {
     private fun parsePoints(csvData: String): List<Point> {
         val points = mutableListOf<Point>()
 
-        CSVReader(StringReader(csvData)).use { reader ->
-            var record: Array<String>? = reader.readNext()
-            while (record != null) {
-                val x = record[1].toDouble()
-                val z = record[3].toDouble()
-                val y = record[5].toDouble()
-                points.add(Point(x, y, z))
-                record = reader.readNext()
-            }
+        val reader = CsvReader(csvData)
+        var record: List<String>? = reader.readNext()
+        while (record != null) {
+            val x = record[1].toDouble()
+            val z = record[3].toDouble()
+            val y = record[5].toDouble()
+            points.add(Point(x, y, z))
+            record = reader.readNext()
         }
 
         return points

@@ -1,11 +1,10 @@
 package benchmarks
 
 import Benchmark
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.util.concurrent.ForkJoinPool
 
 abstract class MatmulBase(
     private val threadCount: Int,
@@ -14,7 +13,7 @@ abstract class MatmulBase(
     protected lateinit var a: Array<DoubleArray>
     protected lateinit var b: Array<DoubleArray>
     protected var resultVal: UInt = 0u
-    private val dispatcher = ForkJoinPool(threadCount).asCoroutineDispatcher()
+    private val dispatcher = Dispatchers.Default.limitedParallelism(threadCount)
 
     companion object {
         private const val CHUNKS_PER_THREAD = 4

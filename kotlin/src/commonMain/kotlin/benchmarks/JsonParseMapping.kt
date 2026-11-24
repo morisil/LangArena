@@ -1,8 +1,10 @@
 package benchmarks
 
 import Benchmark
-import com.alibaba.fastjson2.into
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
+@Serializable
 data class Coord(
     val x: Double,
     val y: Double,
@@ -22,7 +24,7 @@ class JsonParseMapping : Benchmark() {
     }
 
     private fun calc(text: String): Coord {
-        val data = text.into<CoordinatesData>()
+        val data = json.decodeFromString<CoordinatesData>(text)
         val coordinates = data.coordinates
 
         var x = 0.0
@@ -39,9 +41,12 @@ class JsonParseMapping : Benchmark() {
         return Coord(x / len, y / len, z / len)
     }
 
-    class CoordinatesData {
-        var coordinates: List<Coord> = emptyList()
-    }
+    @Serializable
+    class CoordinatesData(
+        val coordinates: List<Coord>,
+    )
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     override fun run(iterationId: Int) {
         val coord = calc(text)

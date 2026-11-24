@@ -1,6 +1,7 @@
 package benchmarks
 
 import Benchmark
+import kotlin.math.PI
 import kotlin.math.sqrt
 
 class Nbody : Benchmark() {
@@ -8,7 +9,7 @@ class Nbody : Benchmark() {
     private var v1 = 0.0
 
     companion object {
-        private const val SOLAR_MASS = 4.0 * Math.PI * Math.PI
+        private const val SOLAR_MASS = 4.0 * PI * PI
         private const val DAYS_PER_YEAR = 365.24
     }
 

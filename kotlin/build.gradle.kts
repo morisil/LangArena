@@ -12,7 +12,7 @@ repositories {
 kotlin {
     jvm {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_25)
+            jvmTarget.set(JvmTarget.JVM_26)
         }
     }
 
@@ -40,8 +40,8 @@ kotlin {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    sourceCompatibility = JavaVersion.VERSION_25.toString()
-    targetCompatibility = JavaVersion.VERSION_25.toString()
+    sourceCompatibility = JavaVersion.VERSION_26.toString()
+    targetCompatibility = JavaVersion.VERSION_26.toString()
 }
 
 val jvmMainCompilation = kotlin.jvm().compilations.getByName("main")
